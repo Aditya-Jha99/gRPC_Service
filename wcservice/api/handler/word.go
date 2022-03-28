@@ -1,39 +1,47 @@
 package handler
 
 import (
-	"encoding/json"
-	"io/ioutil"
+	service "wcservice/service"
 	"net/http"
-	"sort"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
+	"github.com/gin-gonic/gin"
 )
 
-type CountW struct {
-	word  string
-	count int
-}
+func Test_wordHandler_GetWords10(t *testing.T) {
 
-type CountW_ struct {
-	Word  string `json:"word"`
-	Count int    `json:"count"`
-}
+	gin.SetMode(gin.TestMode)
+	r := gin.Default()
 
-type CountWs []CountW_
+	wordHandler := NewWordHandler(service.WordServiceN_())
+	r.POST("Top10", wordHandler.GetWords10)
 
-func PostRequest(w http.ResponseWriter, r *http.Request) {
-	content, _ := ioutil.ReadAll(r.Body)
-	s := []string{string(content)}
-	new_ := WordC(s)
-	WC := make([]CountW, 0, len(new_))
-	for key, val := range new_ {
-		WC = append(WC, CountW{word: key, count: val})
+	type args struct {
+		Text string
 	}
-
-	sort.Slice(WC, func(i, j int) bool {
-		return WC[i].count > WC[j].count
-	})
-	for i := 0; i < len(WC) && i < 10; i++ {
-		count_ := CountWs{CountW_{WC[i].word, WC[i].count}}
-		json.Marshal(count_)
-		json.NewEncoder(w).Encode(count_)
+	tests := []struct {
+		texts       string
+		args       args
+		StatusCode int
+	}{
+		{
+			"Success",
+			args{
+				Text: "a a b",
+			},
+			100,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.texts, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "Top10", strings.NewReader(tt.args.Text))
+			responses := httptest.NewRecorder()
+			r.ServeHTTP(responses, req)
+			if responses.Code != tt.StatusCode {
+				t.Errorf("wordServer.GetWords10() = %v, want %v", responses.Code, tt.StatusCode)
+			}
+		})
 	}
 }
