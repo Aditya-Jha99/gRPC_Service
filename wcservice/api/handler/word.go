@@ -1,47 +1,35 @@
 package handler
 
 import (
-	service "wcservice/service"
+	"wcservice/service"
 	"net/http"
-	"net/http/httptest"
-	"strings"
-	"testing"
 
 	"github.com/gin-gonic/gin"
 )
 
-func Test_wordHandler_GetWords10(t *testing.T) {
+type WordHandler interface {
+	GetWords10(c *gin.Context)
+}
 
-	gin.SetMode(gin.TestMode)
-	r := gin.Default()
+type wordHandler struct {
+	Service service.WordService
+}
 
-	wordHandler := NewWordHandler(service.WordServiceN_())
-	r.POST("Top10", wordHandler.GetWords10)
+func NewWordHandler(service service.WordService) WordHandler {
+	return &wordHandler{
+		Service: service,
+	}
+}
 
-	type args struct {
-		Text string
+func (h *wordHandler) GetWords10(c *gin.Context) {
+
+	bytes, err := c.GetRawData()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, err.Error())
+		return
 	}
-	tests := []struct {
-		texts       string
-		args       args
-		StatusCode int
-	}{
-		{
-			"Success",
-			args{
-				Text: "a a b",
-			},
-			100,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.texts, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodPost, "Top10", strings.NewReader(tt.args.Text))
-			responses := httptest.NewRecorder()
-			r.ServeHTTP(responses, req)
-			if responses.Code != tt.StatusCode {
-				t.Errorf("wordServer.GetWords10() = %v, want %v", responses.Code, tt.StatusCode)
-			}
-		})
-	}
+
+	response := h.Service.GetWords10(string(bytes))
+
+	c.JSON(http.StatusOK, response)
 }
